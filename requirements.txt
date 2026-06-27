@@ -1,0 +1,4 @@
+kivy>=2.3.0
+kivymd>=1.2.0
+plyer>=2.1.0
+sqlite3

@@ -1,0 +1,578 @@
+#:kivy 2.0.0
+#:import Animation kivy.animation.Animation
+#:import Clock kivy.clock.Clock
+#:import dp kivy.metrics.dp
+
+<Lim_Key_Pad_Button@Button>:
+    font_name: "assets/font/NotoSansLimbu-Regular.ttf"
+    font_size: '24sp'
+    theme_text_color: "Custom"
+    text_color: (1, 1, 1, 1)
+    size_hint: 1, 1
+    background_normal: ''
+    background_color: 0.27, 0.35, 0.39, 1      # btn bg color
+    on_release: app.play_sound()
+
+<AKFloatingRoundedAppbarButtonItem@Button>:
+    size_hint: 1, 1
+    padding: dp(10), dp(10)
+    theme_text_color: "Custom"
+    text_color: 1,1,1,1
+    icon_color: 1,1,1,1
+
+<MainScreen>:
+    name: "main_screen"
+    text_input: text_input  # Reference to the TextInput
+    numpad_height: 0
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        md_bg_color: 'white'
+
+        MDLabel:
+            text:'top margin space'
+            halign: 'center'
+            size_hint_y: None
+            height: dp(44)
+
+        MDScrollView:
+            id: appbar_scroll
+            size_hint: 1, None
+            height: dp(56)
+            pos_hint: {'center_x': .5, 'center_y': .5}
+            do_scroll_x: True
+            do_scroll_y: False
+            bar_width: dp(4)
+            scroll_type: ['bars', 'content']
+
+            canvas.before:
+                Color:
+                    rgba: app.theme_cls.primary_color
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            AKFloatingRoundedAppbar:
+                id: floating_appbar
+                size_hint: None, 1
+                width: self.minimum_width
+                press_effect: True
+                spacing: dp(10)
+                padding: dp(1)
+
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "close"
+                    theme_text_color: "Custom"
+                    text: "Close"
+                    icon_size: dp(15)
+                    on_release:
+                        root.cmd_sound()
+                        root.close_note_screen()
+
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: 'text-box-minus-outline'
+                    text: "Clear"
+                    on_release:
+                        root.cmd_sound()
+                        root.clear_text_input()
+
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "content-save"
+                    text: "Save"
+                    icon_size: dp(15)
+                    on_release:
+                        root.cmd_sound()
+                        root.save(self)
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "content-copy"
+                    text: "Copy All"
+                    icon_size: dp(45)
+                    on_release:
+                        root.cmd_sound()
+                        root.copy()
+
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "content-paste"
+                    text: "Paste"
+                    icon_size: dp(45)
+                    on_release:
+                        root.cmd_sound()
+                        root.paste()
+
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "undo-variant"
+                    text: "Undo"
+                    icon_size: dp(15)
+                    on_release:
+                        root.cmd_sound()
+                        root.undo()
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "redo-variant"
+                    text: "Redo"
+                    icon_size: dp(15)
+                    on_release:
+                        root.cmd_sound()
+                        root.redo()
+
+                AKFloatingRoundedAppbarButtonItem:
+                    icon: "share-variant-outline"
+                    text: "Share"
+                    icon_size: dp(15)
+                    on_release:
+                        root.cmd_sound()
+                        root.open_menu(self)
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            padding: '5dp'
+            size_hint: (1, 1)
+            TextInput:
+                id: text_input
+                multiline: True
+                font_name: "assets/font/NotoSansLimbu-Regular.ttf"
+                focus: False
+                on_focus:
+                    root.on_textinput_focus(self, args[1])
+                    if args[1]: root._ensure_cursor_visible()
+                on_text: root.on_textinput_text(self, self.text)
+                background_color: (1, 1, 0.95, 1)
+                foreground_color: (0, 0, 0, 1)
+                font_size: '24sp'
+                padding: ['10dp', '10dp']
+                hint_text: 'Type Here ...'
+                cursor_color: 0, 0, 1, 1
+                cursor_width: '2sp'
+                write_tab: False
+                cursor_blink: True
+                always_render_cursor: True
+                scroll_distance: dp(100)
+                do_scroll: [True, True]
+                selection_color: 0.2, 0.6, 1, 0.4
+                use_bubble: True
+                use_handles: True
+                line_width: 10
+                line_color: 0, 0, 1, 1
+                on_touch_down:
+                    if self.collide_point(*args[1].pos): \
+                    root.show_selection_menu(args[1]) if self.selection_text else None; \
+                    args[1].push()
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            id: numpad
+            size_hint: (1, None)
+            height: root.numpad_height
+            opacity: 1 if root.numpad_visible else 0
+            disabled: not root.numpad_visible
+
+            canvas.before:
+                Color:
+                    rgba: app.theme_cls.bg_normal
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: dp(40)
+                md_bg_color: app.theme_cls.primary_color
+
+                Widget:
+                    size_hint_x: None
+                    width: dp(10)
+
+                MDLabel:
+                    id: suggestion_words
+                    text: 'Display Suggested Word'
+                    font_name: "assets/font/NotoSansLimbu-Regular.ttf"
+                    halign: 'center'
+                    valign: 'middle'
+                    markup: True
+                    size_hint_x: 1
+                    text_size: self.width, None
+                    padding: dp(10), dp(5)
+
+                Widget:
+                    size_hint_x: None
+                    width: dp(10)
+
+            MDGridLayout:
+                cols: 11
+                spacing: dp(2)
+                padding: dp(5)
+                md_bg_color: 1,1,1,1
+
+                Lim_Key_Pad_Button:
+                    text: "᥆"
+                    on_release:
+                        root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥇"
+                    on_release:
+                        root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥈"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥉"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥊"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥋"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥌"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥍"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥎"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "᥏"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "="
+                    on_release: root.insert_text(self.text)
+
+
+                Lim_Key_Pad_Button:
+                    text: "ᤎ"
+                    on_release:
+                        root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤓ"
+                    on_release:
+                        root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤆ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤋ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤌ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤃ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤅ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤕ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤇ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤣ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤤ"
+                    on_release: root.insert_text(self.text)
+
+
+                Lim_Key_Pad_Button:
+                    text: "ᤒ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤁ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤔ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤠ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤏ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤈ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤘ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤐ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤡ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤛ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤢ"
+                    on_release: root.insert_text(self.text)
+
+
+                Lim_Key_Pad_Button:
+                    text: "ᤙ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤜ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤀ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤂ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤍ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤗ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤖ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤑ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤄ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤥ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤦ"
+                    on_release: root.insert_text(self.text)
+
+                Lim_Key_Pad_Button:
+                    text: "ᤰ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤱ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤴ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤳ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤵ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤶ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤷ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤸ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "."
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "ᤧ"
+                    on_release: root.insert_text(self.text)
+                Lim_Key_Pad_Button:
+                    text: "।"
+                    on_release: root.insert_text(self.text)
+
+        MDIconButton
+            icon: 'blank'
+
+    MDBoxLayout:
+        id: number_row
+        padding: dp(5)
+        spacing: dp(12)
+        size_hint_y: None
+        height: dp(48)
+        md_bg_color: app.theme_cls.primary_color
+
+        MDIconButton:
+            icon: 'apple-keyboard-shift'
+            theme_text_color: "Custom"
+            icon_color: app.theme_cls.accent_color if root.shift_state == 'shifted' else "white"
+            size_hint: 1, 1
+            on_release:
+                root.cmd_sound()
+                root.toggle_shift()
+
+        MDIconButton:
+            icon: 'text-box-minus-outline'
+            theme_text_color: "Custom"
+            icon_color: app.theme_cls.accent_color if root.shift_state == 'shifted' else "white"
+            size_hint: 1, 1
+            on_release:
+                root.cmd_sound()
+                root.clear_text_input()
+
+        BoxLayout:
+            id: number_row
+            size_hint_x: None
+            width: dp(150)
+
+            MDRectangleFlatButton:
+                text: "     Space     "
+                theme_text_color: "Custom"
+                text_color: "white"
+                line_color: "white"
+                size_hint: 1, 1
+                on_release:
+                    root.cmd_sound()
+                    root.insert_space()
+
+        MDIconButton:
+            icon: 'backspace-outline'
+            theme_text_color: "Custom"
+            icon_color: app.theme_cls.accent_color if root.shift_state == 'shifted' else "white"
+            size_hint: 1, 1
+            on_release:
+                root.cmd_sound()
+                root.backspace()
+                root.text_input.focus = True
+
+        MDIconButton:
+            icon: 'keyboard-return'
+            theme_text_color: "Custom"
+            icon_color: app.theme_cls.accent_color if root.shift_state == 'shifted' else "white"
+            size_hint: 1, 1
+            on_release:
+                root.cmd_sound()
+                root.insert_newline()
+                root.text_input.focus = True
+                Clock.schedule_once(lambda dt: root._ensure_cursor_visible(), 0.05)
+
+<DashboardScreen>:
+    name: "dashboard_screen"
+    md_bg_color: 0.95, 0.95, 0.95, 1
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: [root.screen_padding, 0, root.screen_padding, 0]
+
+        MDLabel:
+            text:'top margin space'
+            halign: 'center'
+            size_hint_y: None
+            height: root.top_margin
+
+        MDBoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: root.header_height
+            padding: [dp(10), 0, dp(10), 0]
+            md_bg_color: 0.98, 0.98, 0.98, 1
+            spacing: dp(5)
+
+            BoxLayout:
+                id: left_button_container
+                size_hint_x: None
+                width: min(dp(48), root.width * 0.12)
+                pos_hint: {"center_y": .5}
+
+                MDIconButton:
+                    id: menu_button
+                    icon: 'menu'
+                    opacity: 1 if root.current_folder_id is None else 0
+                    disabled: root.current_folder_id is not None
+                    size_hint: 1, 1
+                    pos_hint: {"center_y": .5}
+
+                MDIconButton:
+                    id: back_button
+                    icon: 'arrow-left'
+                    opacity: 0 if root.current_folder_id is None else 1
+                    disabled: root.current_folder_id is None
+                    size_hint: 1, 1
+                    pos_hint: {"center_y": .5}
+                    on_release:
+                        root.go_back_to_dashboard()
+
+            MDLabel:
+                id: header_title
+                text: 'My Notes' if root.current_folder_id is None else root.get_current_folder_name()
+                halign: 'center'
+                font_size: max(18, min(24, root.width // 15))
+                bold: True
+                theme_text_color: "Custom"
+                text_color: 0, 0, 1, 1
+                size_hint_x: 1
+                shorten: True
+                shorten_from: 'right'
+
+            MDIconButton:
+                icon: 'more'   #view-grid-outline
+                size_hint_x: None
+                width: min(dp(48), root.width * 0.12)
+                pos_hint: {"center_y": .5}
+                disabled: True  # Disabled as placeholder
+
+        MDScrollView:
+            size_hint: 1, 1
+            do_scroll_x: False
+            do_scroll_y: True
+            bar_width: min(dp(4), root.width * 0.01)
+            bar_color: 0.5, 0.5, 0.5, 0.8
+            bar_inactive_color: 0.5, 0.5, 0.5, 0.4
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                padding: [root.screen_padding, root.screen_padding, root.screen_padding, root.screen_padding]
+                spacing: root.section_spacing
+                size_hint_y: None
+                height: self.minimum_height
+
+                GridLayout:
+                    id: folders_grid
+                    cols: 1
+                    spacing: root.grid_spacing
+                    size_hint_y: None
+                    height: self.minimum_height
+                    opacity: 0 if root.current_folder_id is not None else 1
+                    disabled: root.current_folder_id is not None
+
+                GridLayout:
+                    id: notes_grid
+                    cols: 1
+                    spacing: root.grid_spacing
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(5), dp(2), dp(6), dp(2)]
+
+    AKFloatingRoundedAppbar:
+        id: floating_appbar
+        size_hint_y: None
+        height: dp(150)
+        bg_color: 140/255, 146/255, 172/255, 0.7
+        press_effect: True
+        radius: [10, 10, 10, 10]
+
+        AKFloatingRoundedAppbarButtonItem:
+            icon: "folder-plus-outline"
+            text: "New Folder"
+            icon_size: min(dp(24), root.width * 0.06)
+            text_size: min(dp(12), root.width * 0.03)
+            pos_hint: {'y': 1.1}
+            color: 0, 0, 1, 1
+            on_release: root.create_new_folder()
+
+        AKFloatingRoundedAppbarButtonItem:
+            icon: "note-plus-outline"
+            text: "New Note"
+            icon_size: min(dp(24), root.width * 0.06)
+            text_size: min(dp(12), root.width * 0.03)
+            pos_hint: {'y': 1.1}
+            on_release: root.go_note_screen()
+
+    Widget:
+        size_hint_y: None
+        height: dp(10)
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
